@@ -8,7 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Get source code
         uses: actions/checkout@v4
@@ -29,12 +28,129 @@ jobs:
           mkdir www
           cp HasnAI-v5.html www/index.html
           npm init -y
-          npm install @capacitor/core @capacitor/android
-          npm install --save-dev @capacitor/cli
+          npm install @capacitor/core@^7 @capacitor/android@^7 @capacitor-community/speech-recognition@7 esbuild
+          npm install --save-dev @capacitor/cli@^7
           echo '{"appId":"com.hasnraza.hasnai","appName":"HasnAI","webDir":"www"}' > capacitor.config.json
           npx cap add android
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("www/index.html")
+          s = p.read_text()
+          a = s.rfind("<script>")
+          b = s.rfind("</script>")
+          if a < 0 or b < a:
+              raise SystemExit("Script not found")
+          js = s[a+8:b]
+          old = "const SpeechRecognition =\n    window.SpeechRecognition || window.webkitSpeechRecognition;"
+          new = "const BrowserSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;\n  const isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());"
+          if old not in js:
+              raise SystemExit("Speech code not found")
+          js = js.replace(old, new, 1)
+          js = js.replace("new SpeechRecognition()", "new BrowserSpeechRecognition()")
+          x = js.index("  function stopListening() {")
+          y = js.index("  micButton.addEventListener", x)
+          replacement = r'''
+            async function stopListening() {
+              if (isNativeApp && isListening) {
+                try { await NativeSpeechRecognition.stop(); } catch(e) {}
+              }
+              if (recognition && isListening) {
+                try { recognition.stop(); } catch(e) {}
+              }
+              isListening = false;
+              orb.classList.remove("listening");
+              setStatus("सुनना बंद है।");
+            }
 
-      - name: Add microphone permissions
+            async function startListening() {
+              if (isListening) {
+                setStatus("मैं पहले से सुन रहा हूँ।");
+                return;
+              }
+              if (isNativeApp) {
+                try {
+                  setStatus("माइक्रोफोन की अनुमति माँगी जा रही है...");
+                  const permission = await NativeSpeechRecognition.requestPermissions();
+                  if (!permission || permission.speechRecognition !== "granted") {
+                    setStatus("Android Settings में HasnAI का Microphone Allow करें।");
+                    return;
+                  }
+                  const available = await NativeSpeechRecognition.available();
+                  if (!available.available) {
+                    setStatus("फोन में Speech Recognition सेवा उपलब्ध नहीं है।");
+                    return;
+                  }
+                  isListening = true;
+                  orb.classList.add("listening");
+                  setStatus("सुन रहा हूँ... अब हिंदी में बोलिए।");
+                  const result = await NativeSpeechRecognition.start({
+                    language: "hi-IN", maxResults: 1,
+                    partialResults: false, popup: true
+                  });
+                  isListening = false;
+                  orb.classList.remove("listening");
+                  const transcript = result && result.matches && result.matches[0];
+                  if (transcript) {
+                    messageEl.value = transcript;
+                    answerUser(transcript);
+                  } else {
+                    setStatus("आवाज़ समझ नहीं आई। फिर कोशिश करें।");
+                  }
+                } catch (error) {
+                  isListening = false;
+                  orb.classList.remove("listening");
+                  setStatus("माइक्रोफोन शुरू नहीं हुआ: " + error.message);
+                }
+                return;
+              }
+              if (!BrowserSpeechRecognition) {
+                setStatus("इस ब्राउज़र में Voice Recognition उपलब्ध नहीं है।");
+                return;
+              }
+              try {
+                recognition = new BrowserSpeechRecognition();
+                recognition.lang = "hi-IN";
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+                recognition.onstart = () => {
+                  isListening = true;
+                  orb.classList.add("listening");
+                  setStatus("सुन रहा हूँ... अब बोलिए।");
+                };
+                recognition.onresult = (event) => {
+                  const transcript = event.results[0][0].transcript;
+                  messageEl.value = transcript;
+                  answerUser(transcript);
+                };
+                recognition.onerror = (event) => {
+                  isListening = false;
+                  orb.classList.remove("listening");
+                  setStatus("Voice error: " + event.error);
+                };
+                recognition.onend = () => {
+                  isListening = false;
+                  orb.classList.remove("listening");
+                };
+                recognition.start();
+              } catch (error) {
+                isListening = false;
+                orb.classList.remove("listening");
+                setStatus("माइक्रोफोन शुरू नहीं हुआ: " + error.message);
+              }
+            }
+
+          '''
+          js = js[:x] + replacement + js[y:]
+          Path("src.js").write_text(
+              'import { SpeechRecognition as NativeSpeechRecognition } from "@capacitor-community/speech-recognition";\n' + js
+          )
+          p.write_text(s[:a] + '<script src="./main.js"></script>' + s[b+9:])
+          PY
+          npx esbuild src.js --bundle --outfile=www/main.js --format=iife
+          npx cap sync android
+
+      - name: Add microphone permission
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -57,3 +173,4 @@ jobs:
         with:
           name: HasnAI-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          
