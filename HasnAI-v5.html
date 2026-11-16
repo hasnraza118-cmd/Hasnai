@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d1b">
+  <title>HasnAI V5</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 22px 16px;
+      background: #080d1b; color: #f4f7ff;
+      font-family: Arial, sans-serif; text-align: center;
+    }
+    main { width: 100%; max-width: 520px; margin: 0 auto; }
+    h1 { margin: 12px 0 5px; font-size: 30px; }
+    .sub { color: #9eabc5; margin: 0 0 25px; }
+    .orb {
+      width: 150px; height: 150px; margin: 25px auto;
+      border: 3px solid #00d9ff; border-radius: 50%;
+      display: grid; place-items: center; color: #00d9ff;
+      font-size: 28px; font-weight: bold;
+      box-shadow: 0 0 28px #00d9ff55;
+    }
+    .orb.listening { box-shadow: 0 0 35px #00d9ffaa; background: #00d9ff18; }
+    .panel {
+      background: #151e32; border: 1px solid #293653;
+      border-radius: 16px; padding: 18px; margin: 14px 0;
+    }
+    #status { color: #00d9ff; min-height: 24px; margin: 8px 0; }
+    label { display: block; text-align: left; margin: 12px 0 7px; color: #c7d2e8; }
+    input {
+      width: 100%; padding: 14px; border-radius: 10px;
+      border: 1px solid #52617d; background: #0b1324;
+      color: white; font-size: 16px;
+    }
+    button {
+      border: 0; border-radius: 10px; padding: 13px 16px;
+      margin: 6px 3px; background: #00d9ff; color: #00101c;
+      font-size: 16px; font-weight: bold;
+    }
+    button.secondary { background: #34435f; color: white; }
+    button:active { opacity: .75; }
+    #reply {
+      min-height: 55px; text-align: left; white-space: pre-wrap;
+      overflow-wrap: anywhere; color: #f4f7ff; line-height: 1.5;
+    }
+    .hint { color: #aebbd2; font-size: 13px; line-height: 1.5; }
+    .small { color: #aebbd2; font-size: 12px; line-height: 1.5; }
+    .memory-list { text-align: left; padding-left: 20px; overflow-wrap: anywhere; }
+    .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+    .row button { flex: 1 1 120px; }
+    .panel input { margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>🤖 HasnAI V5</h1>
+  <p class="sub">आपका व्यक्तिगत सहायक</p>
+
+  <div class="orb" id="orb">AI</div>
+
+  <section class="panel">
+    <div id="status">तैयार हूँ। शुरू करने के लिए माइक्रोफोन दबाएँ।</div>
+    <button id="micButton" type="button">🎙️ बोलें</button>
+    <button id="stopButton" class="secondary" type="button">आवाज़ बंद</button>
+  </section>
+
+  <section class="panel">
+    <label for="message">HasnAI से बात करें</label>
+    <input id="message" type="text" placeholder="जैसे: नमस्ते, समय बताओ, 25 गुणा 4">
+    <button id="sendButton" type="button">भेजें</button>
+    <div id="reply" aria-live="polite"></div>
+  </section>
+
+  <section class="panel">
+    <h3>🌐 ऑनलाइन जानकारी खोजें</h3>
+    <label for="searchText">इंटरनेट पर क्या खोजना है?</label>
+    <input id="searchText" type="text" placeholder="अपना सवाल लिखें">
+    <button id="searchButton" type="button">Google पर खोजें</button>
+    <p class="small">यह बटन आपकी अनुमति से Google Search खोलेगा। यह बटन आपकी अनुमति से Google Search खोलेगा। यह अपने-आप किसी ऑनलाइन AI सेवा से जवाब नहीं बनाता।</p>
+  </section>
+
+  <section class="panel">
+    <h3>🧠 मेरी यादें</h3>
+    <label for="memoryText">कोई सामान्य बात लिखें जिसे HasnAI इस फोन में याद रखे</label>
+    <input id="memoryText" type="text" placeholder="जैसे: मुझे हिंदी में जवाब पसंद हैं">
+    <div class="row">
+      <button id="saveMemoryButton" type="button">याद रखो</button>
+      <button id="showMemoryButton" class="secondary" type="button">यादें दिखाओ</button>
+      <button id="clearMemoryButton" class="secondary" type="button">सभी यादें मिटाओ</button>
+    </div>
+    <div id="memoryOutput" class="small" aria-live="polite"></div>
+    <p class="small">यादें इसी ब्राउज़र के लोकल स्टोरेज में रहेंगी। पासवर्ड, OTP या निजी जानकारी यहाँ सेव न करें।</p>
+  </section>
+
+  <p class="hint">
+    गणित, समय, तारीख और कुछ सामान्य आदेश ऑफलाइन काम करते हैं। आवाज़ पहचानना ब्राउज़र/इंटरनेट पर निर्भर हो सकता है।
+    यह HTML फोन अनलॉक नहीं कर सकता, कैमरा नहीं चलाता और निजी/छिपी फाइलें नहीं खोलता।
+  </p>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const statusEl = document.getElementById("status");
+  const replyEl = document.getElementById("reply");
+  const messageEl = document.getElementById("message");
+  const micButton = document.getElementById("micButton");
+  const stopButton = document.getElementById("stopButton");
+  const sendButton = document.getElementById("sendButton");
+  const orb = document.getElementById("orb");
+  const searchTextEl = document.getElementById("searchText");
+  const memoryTextEl = document.getElementById("memoryText");
+  const memoryOutputEl = document.getElementById("memoryOutput");
+
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  let recognition = null;
+  let isListening = false;
+
+  function setStatus(message) {
+    statusEl.textContent = message;
+  }
+
+  function speak(text) {
+    if (!("speechSynthesis" in window)) {
+      setStatus("इस ब्राउज़र में बोलकर जवाब देने की सुविधा उपलब्ध नहीं है।");
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "hi-IN";
+    utterance.rate = 0.95;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function normalizeDigits(value) {
+    const devanagari = "०१२३४५६७८९";
+    return value.replace(/[०-९]/g, ch => String(devanagari.indexOf(ch)));
+  }
+
+  function calculateNatural(raw) {
+    let t = normalizeDigits(raw.toLowerCase()).replace(/,/g, "").trim();
+    t = t.replace(/×/g, " गुणा ").replace(/[÷]/g, " भाग ").replace(/\s*x\s*/g, " गुणा ");
+    t = t.replace(/\b(multiplied by|multiply by|times|into|guna|गुना|गुणा)\b/g, " * ");
+    t = t.replace(/\b(divided by|divide by|divide)\b/g, " / ");
+    t = t.replace(/\b(plus|जोड़|जोड|प्लस)\b/g, " + ");
+    t = t.replace(/\b(minus|घटाना|घटा|माइनस)\b/g, " - ");
+    t = t.replace(/\b(percent|प्रतिशत)\b/g, " % ");
+    t = t.replace(/कितना(\s+होता)?(\s+है)?|बताओ|बताइए|है\??|कितने|का जवाब|जवाब बताओ/g, " ");
+    t = t.replace(/\s+/g, " ").trim();
+
+    // Spoken arithmetic: two numbers and a recognized operation.
+    const nums = t.match(/-?\d+(?:\.\d+)?/g);
+    const hasWordOperator = /[+*/%]|\s-\s|गुणा|गुना|भाग|जोड़|जोड|घटा|प्लस|माइनस/.test(t);
+    if (nums && nums.length === 2 && hasWordOperator) {
+      const a = Number(nums[0]), b = Number(nums[1]);
+      let op = /\*/.test(t) ? "*" : /\//.test(t) ? "/" : /%/.test(t) ? "%" :
+               /\+/.test(t) ? "+" : /गुणा|गुना/.test(t) ? "*" :
+               /भाग/.test(t) ? "/" : /जोड़|जोड|प्लस/.test(t) ? "+" :
+               /घटा|माइनस/.test(t) ? "-" : (t.match(/\s-\s/) ? "-" : null);
+      if (op) {
+        if ((op === "/" || op === "%") && b === 0) return {ok:false, error:"शून्य से भाग नहीं कर सकते।"};
+        const v = op === "+" ? a+b : op === "-" ? a-b : op === "*" ? a*b : op === "/" ? a/b : a%b;
+        return Number.isFinite(v) ? {ok:true, value:String(Number(v.toFixed(8)))} : {ok:false};
+      }
+    }
+
+    // Numeric expressions only; parse without eval/Function.
+    const expr = t.replace(/\s/g, "");
+    if (!expr || !/^[0-9.+*/()%\-]+$/.test(expr)) return null;
+    const tokens = expr.match(/\d+(?:\.\d+)?|[()+*/%\-]/g);
+    if (!tokens || tokens.join("") !== expr) return null;
+    let pos = 0;
+    function factor() {
+      if (tokens[pos] === "-") { pos++; return -factor(); }
+      if (tokens[pos] === "+") { pos++; return factor(); }
+      if (tokens[pos] === "(") {
+        pos++; const v = expression();
+        if (tokens[pos++] !== ")") throw Error("paren");
+        return v;
+      }
+      const tok = tokens[pos++];
+      if (!tok || !/^\d/.test(tok)) throw Error("number");
+      return Number(tok);
+    }
+    function term() {
+      let v = factor();
+      while (["*","/","%"].includes(tokens[pos])) {
+        const op = tokens[pos++], b = factor();
+        if ((op === "/" || op === "%") && b === 0) throw Error("zero");
+        v = op === "*" ? v*b : op === "/" ? v/b : v%b;
+      }
+      return v;
+    }
+    function expression() {
+      let v = term();
+      while (["+","-"].includes(tokens[pos])) {
+        const op = tokens[pos++], b = term();
+        v = op === "+" ? v+b : v-b;
+      }
+      return v;
+    }
+    try {
+      const result = expression();
+      if (pos !== tokens.length || !Number.isFinite(result)) return null;
+      return {ok:true, value:String(Number(result.toFixed(8)))};
+    } catch (e) {
+      return {ok:false, error:e.message === "zero" ? "शून्य से भाग नहीं कर सकते।" : "यह गणित समझ नहीं आया।"};
+    }
+  }
+
+  function answerUser(rawText) {
+    const text = rawText.trim().toLowerCase();
+    if (!text) { setStatus("पहले कुछ बोलें या लिखें।"); return; }
+    replyEl.textContent = "आपने कहा: " + rawText;
+    let answer;
+    const math = calculateNatural(text);
+
+    if (math && math.ok) {
+      answer = "जवाब है " + math.value;
+    } else if (math && !math.ok) {
+      answer = math.error || "माफ़ कीजिए, यह गणित समझ नहीं आया।";
+    } else if (text.includes("नमस्ते") || text.includes("हेलो") || text.includes("hello") || text === "hi" || text.includes("हाय")) {
+      answer = "नमस्ते! मैं HasnAI हूँ। बताइए, क्या मदद चाहिए?";
+    } else if (text.includes("कैसे हो") || text.includes("kaise ho")) {
+      answer = "मैं ठीक हूँ। आप बताइए, मैं आपकी क्या मदद करूँ?";
+    } else if (text.includes("तुम कौन") || text.includes("आप कौन") || text.includes("who are you") || text.includes("तुम्हारा नाम")) {
+      answer = "मेरा नाम HasnAI है। मैं आपका व्यक्तिगत सहायक हूँ।";
+    } else if (text.includes("धन्यवाद") || text.includes("शुक्रिया") || text.includes("thank you") || text.includes("thanks")) {
+      answer = "आपका स्वागत है! बताइए, मैं और क्या मदद करूँ?";
+    } else if (text.includes("मदद") || text.includes("क्या कर सकते") || text.includes("help")) {
+      answer = "मैं ऑफलाइन गणित, समय, तारीख और कुछ सामान्य आदेश कर सकता हूँ। नए तथ्यों या ताज़ा जानकारी के लिए इंटरनेट पर खोज करनी होगी।";
+    } else if (text.includes("समय") || text.includes("time")) {
+      answer = "अभी समय है " + new Date().toLocaleTimeString("hi-IN");
+    } else if (text.includes("तारीख") || text.includes("date") || text.includes("आज कौन सी तारीख")) {
+      answer = "आज की तारीख है " + new Date().toLocaleDateString("hi-IN");
+    } else if (text.includes("दिन कौन") || text.includes("कौन सा दिन") || text.includes("कौन-सा दिन") || text.includes("आज का दिन") || text.includes("weekday") || text === "day") {
+      const weekdays = ["रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+      answer = "आज " + weekdays[new Date().getDay()] + " है।";
+    } else if (text.includes("बंद") || text.includes("रुको") || text.includes("stop")) {
+      stopListening(); answer = "ठीक है, मैंने सुनना बंद कर दिया है।";
+    } else if (text.includes("फोन लॉक") || text.includes("phone lock")) {
+      answer = "इस HTML डेमो से फोन लॉक नहीं कर सकती। इसके लिए अलग Android ऐप और सुरक्षित सिस्टम अनुमति चाहिए।";
+    } else {
+      answer = "इस सवाल का जवाब मेरे ऑफलाइन फीचर्स में अभी उपलब्ध नहीं है। इंटरनेट पर जानकारी खोजने के लिए नीचे Google Search इस्तेमाल करें।";
+    }
+    replyEl.textContent += "\n\nHasnAI: " + answer;
+    setStatus("जवाब तैयार है।");
+    speak(answer);
+  }
+
+  function getMemories() {
+    try { return JSON.parse(localStorage.getItem("hasnai_memories") || "[]"); }
+    catch (error) { return []; }
+  }
+
+  function showMemories() {
+    const memories = getMemories();
+    memoryOutputEl.textContent = memories.length
+      ? "मेरी यादें: " + memories.map((item, i) => (i + 1) + ". " + item).join(" | ")
+      : "अभी कोई याद सेव नहीं है।";
+  }
+
+  document.getElementById("saveMemoryButton").addEventListener("click", () => {
+    const value = memoryTextEl.value.trim();
+    if (!value) { memoryOutputEl.textContent = "पहले कोई सामान्य बात लिखें।"; return; }
+    const memories = getMemories();
+    if (!memories.includes(value)) memories.push(value);
+    try {
+      localStorage.setItem("hasnai_memories", JSON.stringify(memories.slice(-30)));
+      memoryTextEl.value = "";
+      memoryOutputEl.textContent = "ठीक है, यह बात इसी फोन के ब्राउज़र में सेव हो गई।";
+    } catch (error) {
+      memoryOutputEl.textContent = "सेव नहीं हो पाया। ब्राउज़र स्टोरेज उपलब्ध नहीं है।";
+    }
+  });
+
+  document.getElementById("showMemoryButton").addEventListener("click", showMemories);
+  document.getElementById("clearMemoryButton").addEventListener("click", () => {
+    if (confirm("क्या आप HasnAI की इसी ब्राउज़र में सेव सभी यादें मिटाना चाहते हैं?")) {
+      localStorage.removeItem("hasnai_memories");
+      memoryOutputEl.textContent = "इस ब्राउज़र की यादें मिटा दी गई हैं।";
+    }
+  });
+
+  function runOnlineSearch() {
+    const query = searchTextEl.value.trim();
+    if (!query) { setStatus("पहले खोजने के लिए सवाल लिखें।"); return; }
+    const url = "https://www.google.com/search?q=" + encodeURIComponent(query);
+    window.open(url, "_blank", "noopener");
+    setStatus("Google Search खोलने की कोशिश की गई।");
+  }
+  document.getElementById("searchButton").addEventListener("click", runOnlineSearch);
+  searchTextEl.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") runOnlineSearch();
+  });
+
+  function stopListening() {
+    if (recognition && isListening) {
+      try { recognition.stop(); } catch (error) {}
+    }
+    isListening = false;
+    orb.classList.remove("listening");
+    setStatus("सुनना बंद है।");
+  }
+
+  function startListening() {
+    if (!SpeechRecognition) {
+      setStatus("इस ब्राउज़र में Voice Recognition उपलब्ध नहीं है। Chrome में खोलकर इंटरनेट चालू करके कोशिश करें।");
+      return;
+    }
+
+    if (!window.isSecureContext &&
+        location.hostname !== "localhost" &&
+        location.protocol !== "file:") {
+      setStatus("माइक्रोफोन के लिए सुरक्षित कनेक्शन (HTTPS) चाहिए।");
+      return;
+    }
+
+    if (isListening) {
+      setStatus("मैं पहले से सुन रहा हूँ।");
+      return;
+    }
+
+    try {
+      recognition = new SpeechRecognition();
+      recognition.lang = "hi-IN";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        isListening = true;
+        orb.classList.add("listening");
+        setStatus("सुन रहा हूँ... अब बोलिए।");
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        messageEl.value = transcript;
+        answerUser(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        isListening = false;
+        orb.classList.remove("listening");
+        const messages = {
+          "not-allowed": "माइक्रोफोन की अनुमति नहीं मिली। Chrome की Site settings में Microphone Allow करें।",
+          "service-not-allowed": "Voice Recognition सेवा उपलब्ध नहीं है।",
+          "no-speech": "आवाज़ सुनाई नहीं दी। फिर से कोशिश करें।",
+          "audio-capture": "माइक्रोफोन नहीं मिल रहा। फोन की Microphone permission जाँचें।",
+          "network": "नेटवर्क की समस्या है। इंटरनेट चालू करके फिर कोशिश करें।",
+          "aborted": "सुनना रोक दिया गया।"
+        };
+        setStatus(messages[event.error] || ("Voice error: " + event.error));
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        orb.classList.remove("listening");
+        if (statusEl.textContent === "सुन रहा हूँ... अब बोलिए।") {
+          setStatus("सुनना समाप्त हुआ। फिर से बोलने के लिए माइक्रोफोन दबाएँ।");
+        }
+      };
+
+      recognition.start();
+    } catch (error) {
+      isListening = false;
+      orb.classList.remove("listening");
+      setStatus("माइक्रोफोन शुरू नहीं हुआ: " + error.message);
+    }
+  }
+
+  micButton.addEventListener("click", startListening);
+  stopButton.addEventListener("click", () => {
+    stopListening();
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  });
+  sendButton.addEventListener("click", () => answerUser(messageEl.value));
+  messageEl.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") answerUser(messageEl.value);
+  });
+})();
+</script>
+</body>
+</html>
