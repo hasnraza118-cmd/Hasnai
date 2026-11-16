@@ -236,7 +236,7 @@
       answer = "मैं ऑफलाइन गणित, समय, तारीख और कुछ सामान्य आदेश कर सकता हूँ। नए तथ्यों या ताज़ा जानकारी के लिए इंटरनेट पर खोज करनी होगी।";
     } else if (text.includes("समय") || text.includes("time")) {
       answer = "अभी समय है " + new Date().toLocaleTimeString("hi-IN");
-    } else if (text.includes("तारीख") || text.includes("date") || text.includes("आज कौन सी तारीख")) {
+    } else if (text.includes("तारीख") || text.includes("डेट") || text.includes("दिनांक") || text.includes("date") || text.includes("आज कौन सी तारीख")) {
       answer = "आज की तारीख है " + new Date().toLocaleDateString("hi-IN");
     } else if (text.includes("दिन कौन") || text.includes("कौन सा दिन") || text.includes("कौन-सा दिन") || text.includes("आज का दिन") || text.includes("weekday") || text === "day") {
       const weekdays = ["रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
