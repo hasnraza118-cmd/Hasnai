@@ -37,7 +37,6 @@ jobs:
           from pathlib import Path
           p = Path("www/index.html")
           s = p.read_text()
-          s = s.replace("<script>", '<script src="./ai-brain.js"></script><script>', 1)
           a = s.rfind("<script>")
           b = s.rfind("</script>")
           if a < 0 or b < a:
