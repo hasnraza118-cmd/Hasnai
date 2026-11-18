@@ -26,7 +26,7 @@ export default {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: env.OPENAI_MODEL || "gpt-6.2-astra",
+          model: env.OPENAI_MODEL || "gpt-6-astra",
           instructions: SYSTEM_PROMPT,
           input: message,
           max_output_tokens: 700,
