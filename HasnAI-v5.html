@@ -100,6 +100,7 @@
   </p>
 </main>
 
+<script src="./ai-brain.js"></script>
 <script>
 (() => {
   "use strict";
@@ -213,7 +214,7 @@
     }
   }
 
-  function answerUser(rawText) {
+  async function answerUser(rawText) {
     const text = rawText.trim().toLowerCase();
     if (!text) { setStatus("पहले कुछ बोलें या लिखें।"); return; }
     replyEl.textContent = "आपने कहा: " + rawText;
@@ -246,7 +247,7 @@
     } else if (text.includes("फोन लॉक") || text.includes("phone lock")) {
       answer = "इस HTML डेमो से फोन लॉक नहीं कर सकती। इसके लिए अलग Android ऐप और सुरक्षित सिस्टम अनुमति चाहिए।";
     } else {
-      answer = "इस सवाल का जवाब मेरे ऑफलाइन फीचर्स में अभी उपलब्ध नहीं है। इंटरनेट पर जानकारी खोजने के लिए नीचे Google Search इस्तेमाल करें।";
+      answer = await window.HasnAIBrain.ask(rawText);
     }
     replyEl.textContent += "\n\nHasnAI: " + answer;
     setStatus("जवाब तैयार है।");
