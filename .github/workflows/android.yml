@@ -42,7 +42,6 @@ jobs:
           if a < 0 or b < a:
               raise SystemExit("Script not found")
           js = s[a+8:b]
-          js = js.replace("function answerUser(rawText) {", "async function answerUser(rawText) {", 1)
           js = js.replace('answer = "इस सवाल का जवाब मेरे ऑफलाइन फीचर्स में अभी उपलब्ध नहीं है। इंटरनेट पर जानकारी खोजने के लिए नीचे Google Search इस्तेमाल करें।";', 'answer = await window.HasnAIBrain.ask(rawText);', 1)
           old = "const SpeechRecognition =\n    window.SpeechRecognition || window.webkitSpeechRecognition;"
           new = "const BrowserSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;\n  const isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());"
