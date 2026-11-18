@@ -126,7 +126,18 @@
     statusEl.textContent = message;
   }
 
-  function speak(text) {
+  async function speak(text) {
+    const isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (isNativeApp && window.HasnAINativeTTS) {
+      try {
+        await window.HasnAINativeTTS.speak(text);
+        return;
+      } catch (error) {
+        setStatus("आवाज़ नहीं निकल पाई। फोन की Text-to-Speech सेटिंग और हिंदी आवाज़ जाँचें।");
+        console.warn("HasnAI native TTS error:", error);
+        return;
+      }
+    }
     if (!("speechSynthesis" in window)) {
       setStatus("इस ब्राउज़र में बोलकर जवाब देने की सुविधा उपलब्ध नहीं है।");
       return;
@@ -380,6 +391,7 @@
   stopButton.addEventListener("click", () => {
     stopListening();
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (window.HasnAINativeTTS) window.HasnAINativeTTS.stop().catch(() => {});
   });
   sendButton.addEventListener("click", () => answerUser(messageEl.value));
   messageEl.addEventListener("keydown", (event) => {
