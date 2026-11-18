@@ -29,7 +29,7 @@ jobs:
           cp HasnAI-v5.html www/index.html
           cp ai-brain.js www/ai-brain.js
           npm init -y
-          npm install @capacitor/core@^7 @capacitor/android@^7 @capacitor-community/speech-recognition@7 esbuild
+          npm install @capacitor/core@^7 @capacitor/android@^7 @capacitor-community/speech-recognition@7 @capacitor-community/text-to-speech@^6.1.0 esbuild
           npm install --save-dev @capacitor/cli@^7
           echo '{"appId":"com.hasnraza.hasnai","appName":"HasnAI","webDir":"www"}' > capacitor.config.json
           npx cap add android
@@ -145,7 +145,10 @@ jobs:
           '''
           js = js[:x] + replacement + js[y:]
           Path("src.js").write_text(
-              'import { SpeechRecognition as NativeSpeechRecognition } from "@capacitor-community/speech-recognition";\n' + js
+              'import { SpeechRecognition as NativeSpeechRecognition } from "@capacitor-community/speech-recognition";\n'
+              'import { TextToSpeech } from "@capacitor-community/text-to-speech";\n'
+              'window.HasnAINativeTTS = { speak: (text) => TextToSpeech.speak({ text, lang: "hi-IN", rate: 0.95, pitch: 1.0, volume: 1.0 }), stop: () => TextToSpeech.stop() };\n'
+              + js
           )
           p.write_text(s[:a] + '<script src="./main.js"></script>' + s[b+9:])
           PY
